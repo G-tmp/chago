@@ -3,44 +3,60 @@ package main
 import "encoding/json"
 
 
-var h = hub{
-    clients: make(map[*connection]bool),
-    broadcast: make(chan []byte),
-    register: make(chan *connection),
-    unregister: make(chan *connection),
-}
-
-type hub struct {
-    clients     map[*connection]bool
-    broadcast   chan []byte
-    register    chan *connection
-    unregister  chan *connection
+type Hub struct {
+    clients     map[*Client]bool
+    broadcast   chan *Client
+    register    chan *Client
+    unregister  chan *Client
+    user_list   []string
 }
 
 
-func (h *hub) run() {
+func newHub() *Hub {
+    return &Hub{
+        broadcast:  make(chan *Client),
+        register:   make(chan *Client),
+        unregister: make(chan *Client),
+        clients:    make(map[*Client]bool),
+        user_list:  []string{},
+    }
+}
+
+
+func (hub *Hub) run() {
     for {
         select {
-        case c := <-h.register:
-            h.clients[c] = true
+        case c := <-hub.register:
+            hub.clients[c] = true
             c.msg.Type = "handshake"
             jd, _ := json.Marshal(c.msg)
             c.send <- jd
-        case c := <-h.unregister:
-            if _, ok := h.clients[c]; ok {
-                delete(h.clients, c)
+        case c := <-hub.unregister:
+            if _, ok := hub.clients[c]; ok {
+                delete(hub.clients, c)
                 close(c.send)
+                c.conn.Close()
             }
-        case msg := <-h.broadcast:
-            for c := range h.clients {
-                select {
-                case c.send <- msg:
+        case c := <-hub.broadcast:
+            for client := range hub.clients {
+                if c == client {
+                    c.msg.Self = true
+                }else {
+                    c.msg.Self = false    
+                }
+                
+                jd, _ := json.Marshal(c.msg)
 
+                select {
+                case client.send <- jd:
+                
                 default:
-                    delete(h.clients, c)
-                    close(c.send)
+                    delete(hub.clients, client)
+                    close(client.send)
+                    c.conn.Close()
                 }
             }
+ 
         }
     }
 }
