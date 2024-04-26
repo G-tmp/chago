@@ -17,7 +17,9 @@ func main() {
         serveWs(hub, w, r)
     })
     
-    if err := http.ListenAndServe(":12345", nil); err != nil {
+    port := "12345"
+    fmt.Printf("http://127.0.0.1:%v \n", port)
+    if err := http.ListenAndServe(":" + port, nil); err != nil {
         fmt.Println("err:", err)
     }
 }

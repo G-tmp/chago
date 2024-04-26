@@ -20,7 +20,7 @@ type Client struct {
 var upgrader = &websocket.Upgrader{
     ReadBufferSize: 512,
     WriteBufferSize: 512,
-    CheckOrigin: func(r *http.Request) bool { return true },
+    // CheckOrigin: func(r *http.Request) bool { return true },
 }
 
 
@@ -43,12 +43,12 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
     }
 
     client.hub.register <- client
-    go client.writer()
-    go client.reader()
+    go client.write()
+    go client.read()
 }
 
 
-func (client *Client) writer() {
+func (client *Client) write() {
     for msg := range client.send {
         client.conn.WriteMessage(websocket.TextMessage, msg)
     }
@@ -56,7 +56,7 @@ func (client *Client) writer() {
 }
 
 
-func (client *Client) reader() {
+func (client *Client) read() {
     for {
         _, m, err := client.conn.ReadMessage()
         if err != nil {
@@ -69,7 +69,6 @@ func (client *Client) reader() {
         switch client.msg.Type {
         case "login":
             client.hub.user_list = append(client.hub.user_list, client.msg.User)
-            // user_list = append(user_list, client.msg.User)
             client.msg.UserList = client.hub.user_list
             client.msg.Timestamp = time.Now().Unix()
             client.hub.broadcast <- client
@@ -77,12 +76,11 @@ func (client *Client) reader() {
             client.msg.Timestamp = time.Now().Unix()
             client.hub.broadcast <- client
         case "logout":
-            // c.msg.Timestamp = time.Now().Unix()
-            // user_list = del(user_list, c.msg.User)
-            // c.msg.UserList = user_list
-            // jd, _ := json.Marshal(c.msg)
-            // client.hub.unregister <- c
-            // client.hub.broadcast <- jd
+            // client.hub.user_list = del(client.hub.user_list, client.msg.User)
+            // client.msg.UserList = client.hub.user_list
+            // client.msg.Timestamp = time.Now().Unix()
+            // client.hub.broadcast <- client
+            // client.hub.unregister <- client
         default:
             log.Print("unknown type, ditch")
         }

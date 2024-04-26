@@ -35,7 +35,6 @@ func (hub *Hub) run() {
             if _, ok := hub.clients[c]; ok {
                 delete(hub.clients, c)
                 close(c.send)
-                c.conn.Close()
             }
         case c := <-hub.broadcast:
             for client := range hub.clients {
@@ -53,7 +52,6 @@ func (hub *Hub) run() {
                 default:
                     delete(hub.clients, client)
                     close(client.send)
-                    c.conn.Close()
                 }
             }
  
