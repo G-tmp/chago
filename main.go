@@ -1,7 +1,7 @@
 package main
 
 import (
-    "fmt"
+    "log"
     "net/http"
 )
 
@@ -10,16 +10,19 @@ func main() {
     hub := newHub()
     go hub.run()
 
-    http.HandleFunc("/", func (w http.ResponseWriter, r *http.Request){
-        http.ServeFile(w, r, "chat.html")
-    })
-    http.HandleFunc("/chat", func (w http.ResponseWriter, r *http.Request){
+    http.Handle("/", http.FileServer(http.Dir("./front")))
+
+    http.HandleFunc("/ws", func (w http.ResponseWriter, r *http.Request){
         serveWs(hub, w, r)
     })
-    
+
     port := "12345"
-    fmt.Printf("http://127.0.0.1:%v \n", port)
+    log.Printf("http://127.0.0.1:%v \n", port)
     if err := http.ListenAndServe(":" + port, nil); err != nil {
-        fmt.Println("err:", err)
+        log.Println(err)
     }
+}
+
+func init(){
+    log.SetFlags(log.LstdFlags | log.Lshortfile)
 }

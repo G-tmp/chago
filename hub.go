@@ -1,60 +1,104 @@
 package main
 
-import "encoding/json"
+import (
+    "sync"
+)
+
+
+type clientSet struct {
+    mu      sync.RWMutex
+    numbers map[*Client]struct{}
+}
+
+func (cs *clientSet) add(c *Client){
+    cs.mu.Lock()
+    defer cs.mu.Unlock()
+
+    cs.numbers[c] = struct{}{}
+}
+
+func (cs *clientSet) del(c *Client){
+    cs.mu.Lock()
+    defer cs.mu.Unlock()
+
+    delete(cs.numbers, c)
+}
+
+func (cs *clientSet) size() int {
+    cs.mu.RLock()
+    defer cs.mu.RUnlock()
+
+    return len(cs.numbers)
+}
+
+func (cs *clientSet) clear(){
+    cs.mu.Lock()
+    defer cs.mu.Unlock()
+
+    cs.numbers = make(map[*Client]struct{})
+}
+
+func (cs *clientSet) all() []*Client {
+    cs.mu.RLock()
+    defer cs.mu.RUnlock()
+
+    list := make([]*Client, 0, len(cs.numbers))
+    for i := range cs.numbers {
+        list = append(list, i)
+    }
+
+    return list
+}
+
+func (cs *clientSet) each(f func(c *Client)){
+    cs.mu.RLock()
+    defer cs.mu.RUnlock()
+
+    for i := range cs.numbers {
+        f(i)
+    }
+}
+
 
 
 type Hub struct {
-    clients     map[*Client]bool
-    broadcast   chan *Client
+    clients     *clientSet
+    broadcast   chan []byte
     register    chan *Client
     unregister  chan *Client
-    user_list   []string
+    bf          func()
 }
 
 
 func newHub() *Hub {
     return &Hub{
-        broadcast:  make(chan *Client),
+        broadcast:  make(chan []byte, 256),
         register:   make(chan *Client),
         unregister: make(chan *Client),
-        clients:    make(map[*Client]bool),
-        user_list:  []string{},
+        clients:    &clientSet{
+            numbers: make(map[*Client]struct{}),
+        },
+        bf:         func(){},
     }
 }
 
+func (hub *Hub) broadcastF(f func()){
+    hub.bf = f
+}
 
 func (hub *Hub) run() {
     for {
         select {
         case c := <-hub.register:
-            hub.clients[c] = true
-            c.msg.Type = "handshake"
-            jd, _ := json.Marshal(c.msg)
-            c.send <- jd
+            hub.clients.add(c)
         case c := <-hub.unregister:
-            if _, ok := hub.clients[c]; ok {
-                delete(hub.clients, c)
-                close(c.send)
-            }
-        case c := <-hub.broadcast:
-            for client := range hub.clients {
-                if c == client {
-                    c.msg.Self = true
-                }else {
-                    c.msg.Self = false    
-                }
-                
-                jd, _ := json.Marshal(c.msg)
+            hub.clients.del(c)
+        case  m := <-hub.broadcast:
+            // hub.bf()
 
-                select {
-                case client.send <- jd:
-                
-                default:
-                    delete(hub.clients, client)
-                    close(client.send)
-                }
-            }
- 
+            hub.clients.each(func(c *Client){
+                c.send <- m
+            })
         }
     }
 }

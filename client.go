@@ -1,20 +1,18 @@
 package main
 
 import (
-    "encoding/json"
     "log"
     "net/http"
     "time"
-
     "github.com/gorilla/websocket"
 )
 
 
 type Client struct {
-    hub  *Hub
-    conn *websocket.Conn
-    send chan []byte
-    msg  *Msg
+    hub     *Hub
+    conn    *websocket.Conn
+    send    chan []byte
+    nickname   string
 }
 
 var upgrader = &websocket.Upgrader{
@@ -35,28 +33,32 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
         log.Println(err)
         return
     }
+    
     client := &Client{
         send: make(chan []byte, 256),
         conn: conn, 
-        msg: &Msg{},
         hub: hub,
     }
 
     client.hub.register <- client
-    go client.write()
-    go client.read()
+
+    go client.writePump()
+    go client.readPump()
 }
 
 
-func (client *Client) write() {
+func (client *Client) writePump() {
     for msg := range client.send {
-        client.conn.WriteMessage(websocket.TextMessage, msg)
+        if err := client.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+            log.Println(err)
+        }
     }
+
     client.conn.Close()
 }
 
 
-func (client *Client) read() {
+func (client *Client) readPump() {
     for {
         _, m, err := client.conn.ReadMessage()
         if err != nil {
@@ -64,60 +66,51 @@ func (client *Client) read() {
             break
         }
 
-        json.Unmarshal(m, &client.msg)
+        var msg *Msg 
+        msg = decode(m)
 
-        switch client.msg.Type {
-        case "login":
-            client.hub.user_list = append(client.hub.user_list, client.msg.User)
-            client.msg.UserList = client.hub.user_list
-            client.msg.Timestamp = time.Now().Unix()
-            client.hub.broadcast <- client
-        case "user":
-            client.msg.Timestamp = time.Now().Unix()
-            client.hub.broadcast <- client
-        case "logout":
-            // client.hub.user_list = del(client.hub.user_list, client.msg.User)
-            // client.msg.UserList = client.hub.user_list
-            // client.msg.Timestamp = time.Now().Unix()
-            // client.hub.broadcast <- client
-            // client.hub.unregister <- client
+        switch msg.Action {
+        case SendMessageAction:
+            msg.Timestamp = time.Now().Unix()
+            jd := msg.encode()
+
+            client.hub.broadcast <- jd
+        case UserJoinedAction:
+            client.nickname = msg.Sender
+            msg.Timestamp = time.Now().Unix()
+            for _, c := range client.hub.clients.all() {
+                msg.UserList = append(msg.UserList, c.nickname)
+            }
+            jd := msg.encode()
+
+            client.hub.broadcast <- jd
+        // case UserLeftAction:
+            
         default:
             log.Print("unknown type, ditch")
         }
     }
 
     defer func() {
-        client.msg.Type = "logout"
-        client.hub.user_list = del(client.hub.user_list, client.msg.User)
-        client.msg.UserList = client.hub.user_list
-        client.msg.Timestamp = time.Now().Unix()
-        client.hub.broadcast <- client
+        // 2. other goroutine, call later
         client.hub.unregister <- client
-    }()
-}
+        close(client.send)
+        client.conn.Close()
 
-
-func del(slice []string, user string) []string {
-    count := len(slice)
-    if count == 0 {
-        return slice
-    }
-    if count == 1 && slice[0] == user {
-        return []string{}
-    }
-    var n_slice = []string{}
-    for i := range slice {
-        if slice[i] == user && i == count {
-            return slice[:count]
-        } else if slice[i] == user {
-            n_slice = append(slice[:i], slice[i+1:]...)
-            break
+        msg := &Msg{
+            Action: UserLeftAction,
+            Sender: client.nickname,
+            Timestamp: time.Now().Unix(),
         }
-    }
-    return n_slice
-}
+        // 1. call and get clients map first
+        for _, c := range client.hub.clients.all() {
+            if c != client {
+                msg.UserList = append(msg.UserList, c.nickname)
+            }
+        }
 
+        jd := msg.encode()
+        client.hub.broadcast <- jd
 
-func init(){
-    log.SetFlags(log.LstdFlags | log.Lshortfile)
+    }()
 }
