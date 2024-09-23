@@ -18,16 +18,9 @@ type Client struct {
 var upgrader = &websocket.Upgrader{
     ReadBufferSize: 512,
     WriteBufferSize: 512,
-    // CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-
 func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
-    // cookie := http.Cookie{Name: "session", Value: "111", Path: "/ws"}
-    // http.SetCookie(w, &cookie)
-    // header := http.Header{}
-    // header.Add("Set-Cookie", cookie.String())
-
     conn, err := upgrader.Upgrade(w, r, nil)
     if err != nil {
         log.Println(err)
@@ -51,6 +44,7 @@ func (client *Client) writePump() {
     for msg := range client.send {
         if err := client.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
             log.Println(err)
+            break
         }
     }
 
@@ -72,19 +66,26 @@ func (client *Client) readPump() {
         switch msg.Action {
         case SendMessageAction:
             msg.Timestamp = time.Now().Unix()
-            jd := msg.encode()
+            msg.Type = TextType
 
+            jd := msg.encode()
             client.hub.broadcast <- jd
         case UserJoinedAction:
             client.nickname = msg.Sender
             msg.Timestamp = time.Now().Unix()
+            msg.Type = TextType
             for _, c := range client.hub.clients.all() {
                 msg.UserList = append(msg.UserList, c.nickname)
             }
-            jd := msg.encode()
 
+            jd := msg.encode()
             client.hub.broadcast <- jd
-        // case UserLeftAction:
+        case "upload-image":
+            msg.Timestamp = time.Now().Unix()
+            msg.Type = ImageType
+            
+            jd := msg.encode()
+            client.hub.broadcast <- jd
             
         default:
             log.Print("unknown type, ditch")
@@ -101,6 +102,7 @@ func (client *Client) readPump() {
             Action: UserLeftAction,
             Sender: client.nickname,
             Timestamp: time.Now().Unix(),
+            Type: TextType,
         }
         // 1. call and get clients map first
         for _, c := range client.hub.clients.all() {

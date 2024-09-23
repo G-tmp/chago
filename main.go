@@ -10,8 +10,9 @@ func main() {
     hub := newHub()
     go hub.run()
 
-    http.Handle("/", http.FileServer(http.Dir("./front")))
-
+    http.Handle("/", http.FileServer(http.Dir("./web")))
+    http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("./public"))))
+    http.HandleFunc("POST /upload", uploadSingleFile)
     http.HandleFunc("/ws", func (w http.ResponseWriter, r *http.Request){
         serveWs(hub, w, r)
     })

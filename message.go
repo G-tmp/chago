@@ -12,16 +12,20 @@ const (
     UserLeftAction    = "user-left"
     JoinRoomAction    = "join-room"
     LeaveRoomAction   = "leave-room"
+
+    TextType        = "text"
+    ImageType       = "image"
 )
 
 type Msg struct {
-    // Self      bool     `json:"self"`
     Action    string   `json:"action"`
+    Type      string   `json:"type"`
     Sender    string   `json:"sender"`
-    Target    string   `json:"target"`
     Content   string   `json:"content"`
     Timestamp int64    `json:"timestamp"`
     UserList  []string `json:"user_list"`
+    // Self      bool     `json:"self"`
+    // Target    string   `json:"target"`
 }
 
 func (msg *Msg) encode() []byte {
