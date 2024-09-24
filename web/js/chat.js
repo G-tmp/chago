@@ -20,27 +20,18 @@ ws.onmessage = function (e) {
    var msg = JSON.parse(e.data);
 
    if (msg.type == "image"){
-      var name = document.createElement("p");
-      name.innerHTML = msg.sender + ":";
-      msg_list.appendChild(name);
-
-      var img = document.createElement('img');
-      img.src = msg.content;
-      img.style.display = "block";
-      msg_list.appendChild(img);
-
-      msg_list.scrollTop = msg_list.scrollHeight;
+      appendImg(msg)
    } else {
       switch (msg.action) {
       case 'send-message':
-         appendMsg(msg.sender + ': ' + msg.content);
+         appendMsg(msg);
          break;
       case 'user-join':
-         appendMsg(msg.sender + " jointed")
+         sysMsg(msg.sender + " jointed")
          list(msg.user_list)
          break;
       case 'user-left':
-         appendMsg(msg.sender + " left")
+         sysMsg(msg.sender + " left")
          list(msg.user_list)
          break;
       }
@@ -87,10 +78,49 @@ function sendMsg() {
    send(msg);
 }
 
+function sysMsg(data){
+   var msg = document.createElement("h4")
+   msg.innerHTML = data
+   msg.className = "msg-sys"
+   msg_list.appendChild(msg)
+   msg_list.scrollTop = msg_list.scrollHeight;
+}
+
 function appendMsg(data) {
-   var msg = document.createElement("p");
-   msg.innerHTML = data;
+   var msg = document.createElement("div")
+   var name = document.createElement("strong")
+   var time = document.createElement("a")
+   var content = document.createElement("p")
+
+   name.innerHTML = data.sender;
+   time.innerHTML = " - 123";
+   content.innerHTML = data.content;
+
+   msg.className = "msg"
+   msg.appendChild(name)
+   msg.appendChild(time)
+   msg.appendChild(content)
+   msg_list.appendChild(msg)
+   msg_list.scrollTop = msg_list.scrollHeight;
+}
+
+function appendImg(data) {
+   var msg = document.createElement("div")
+   var name = document.createElement("strong")
+   var time = document.createElement("a")
+   var img = document.createElement('img');
+
+   msg.className = "msg"
+   name.innerHTML = data.sender;
+   time.innerHTML = " - 123";
+   img.src = data.content;
+   img.style.display = "block";
    msg_list.appendChild(msg);
+
+   msg.appendChild(name)
+   msg.appendChild(time)
+   msg.appendChild(img)
+   msg_list.appendChild(msg)
    msg_list.scrollTop = msg_list.scrollHeight;
 }
 
@@ -102,7 +132,7 @@ function list(list){
       user_list.removeChild(user_list.firstChild);
    }
    for (var index in list) {
-      var user = document.createElement("p");
+      var user = document.createElement("li");
       user.innerHTML = list[index];
       user_list.appendChild(user);
    }
@@ -128,7 +158,7 @@ function upload() {
       fileInput.value = '';
       var response = JSON.parse(request.responseText);
       var file = response.filename;
-      console.log(file)
+
       var msg = {
          "action": "upload-image",
          "content": file,

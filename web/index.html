@@ -1,36 +1,40 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title></title>
-    <style>
-        p {
-            text-align: left;
-            padding-left: 20px;
-        }
-    </style>
-</head>
-<body>
-<div style="width: 800px;height: 600px;margin: 30px auto;text-align: center">
-    <h1>chago</h1>
-    <div style="width: 800px;border: 1px solid gray;height: 300px;">
-        <div style="width: 200px;height: 300px;float: left;text-align: left;">
-            <p><span>Online:</span><span id="user_num">0</span></p>
-            <div id="user_list" style="overflow: auto;">
-            </div>
-        </div>
-        <div id="msg_list" style="width: 598px;border:  1px solid gray; height: 300px;overflow: scroll;float: left;">
-        </div>
-    </div>
-    <input type="file" id="fileInput" />
-    <button onclick="upload()" >upload</button>
-    <br>
+   <head>
+      <title></title>
+      <link rel="stylesheet" href="./css/chat.css" />
+   </head>
 
-    <textarea id="mymsg" rows="6" cols="50" onkeydown="confirm(event)"></textarea><br>
-    <input type="button" value="send" onclick="sendMsg()">
-    
-    <p id="status"></p>
-</div>
-</body>
+   <body>
+      <div class="container">
+         <h1>chago</h1>
+         <div class="middle">
+            <div class="user-box">
+               <div>
+                  <p><span>Online - </span><span id="user_num">0</span></p>
+               </div>
+               <div class="user-list">
+                  <ul id="user_list">
+                  </ul>
+               </div>
+            </div>
+
+            <div class="msg-box" id="msg_list">
+            </div>
+         </div>
+
+         <div class="bottom" >
+            <h4 id="status"></h4>
+
+            <input type="file" id="fileInput" />
+            <button onclick="upload()">upload</button>
+            <p></p>
+
+            <textarea id="mymsg" rows="5" cols="50" onkeydown="confirm(event)"></textarea><br />
+            <input type="button" value="send" onclick="sendMsg()" />
+         </div>
+      </div>
+   </body>
 </html>
 
 <script type="text/javascript" src="./js/chat.js"></script>
