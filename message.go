@@ -24,7 +24,7 @@ type Msg struct {
     Content   string   `json:"content"`
     Timestamp int64    `json:"timestamp"`
     UserList  []string `json:"user_list"`
-    // Self      bool     `json:"self"`
+    Self      bool     `json:"self"`
     // Target    string   `json:"target"`
 }
 

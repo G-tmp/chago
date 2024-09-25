@@ -66,7 +66,6 @@ type Hub struct {
     broadcast   chan []byte
     register    chan *Client
     unregister  chan *Client
-    bf          func()
 }
 
 
@@ -78,12 +77,7 @@ func newHub() *Hub {
         clients:    &clientSet{
             numbers: make(map[*Client]struct{}),
         },
-        bf:         func(){},
     }
-}
-
-func (hub *Hub) broadcastF(f func()){
-    hub.bf = f
 }
 
 func (hub *Hub) run() {
@@ -94,11 +88,17 @@ func (hub *Hub) run() {
         case c := <-hub.unregister:
             hub.clients.del(c)
         case  m := <-hub.broadcast:
-            // hub.bf()
-
             hub.clients.each(func(c *Client){
                 c.send <- m
             })
         }
     }
+}
+
+func (hub *Hub) broadcastE(client *Client, m []byte){
+    hub.clients.each(func(c *Client){
+        if c != client {
+            c.send <- m
+        }
+    })
 }

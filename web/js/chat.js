@@ -8,7 +8,7 @@ const user_list = document.getElementById("user_list");
 const user_num  = document.getElementById("user_num");
 
 ws.onopen = function () {
-   status.innerHTML = "Successfully connected to server";
+   status.innerHTML = uname;
    var msg = {
       "action": "user-join",
       "sender": uname
@@ -93,10 +93,13 @@ function appendMsg(data) {
    var content = document.createElement("p")
 
    name.innerHTML = data.sender;
-   time.innerHTML = " - 123";
+   time.innerHTML = " " + data.timestamp;
    content.innerHTML = data.content;
 
-   msg.className = "msg"
+   if (data.self)
+      msg.className = "msg-me"
+   else 
+      msg.className = "msg"
    msg.appendChild(name)
    msg.appendChild(time)
    msg.appendChild(content)
@@ -110,9 +113,12 @@ function appendImg(data) {
    var time = document.createElement("a")
    var img = document.createElement('img');
 
-   msg.className = "msg"
+   if (data.self)
+      msg.className = "msg-me"
+   else 
+      msg.className = "msg"
    name.innerHTML = data.sender;
-   time.innerHTML = " - 123";
+   time.innerHTML = " " + data.timestamp;
    img.src = data.content;
    img.style.display = "block";
    msg_list.appendChild(msg);

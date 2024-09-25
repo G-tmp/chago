@@ -69,7 +69,11 @@ func (client *Client) readPump() {
             msg.Type = TextType
 
             jd := msg.encode()
-            client.hub.broadcast <- jd
+            client.hub.broadcastE(client, jd)
+
+            msg.Self = true
+            jd = msg.encode()
+            client.send <- jd
         case UserJoinedAction:
             client.nickname = msg.Sender
             msg.Timestamp = time.Now().Unix()
@@ -85,7 +89,11 @@ func (client *Client) readPump() {
             msg.Type = ImageType
             
             jd := msg.encode()
-            client.hub.broadcast <- jd
+            client.hub.broadcastE(client, jd)
+            
+            msg.Self = true
+            jd = msg.encode()
+            client.send <- jd
             
         default:
             log.Print("unknown type, ditch")
