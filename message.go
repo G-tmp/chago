@@ -5,26 +5,23 @@ import(
     "log"
 )
 
-
 const (
-    SendMessageAction = "send-message"
-    UserJoinedAction  = "user-join"
-    UserLeftAction    = "user-left"
-    JoinRoomAction    = "join-room"
-    LeaveRoomAction   = "leave-room"
-
-    TextType        = "text"
-    ImageType       = "image"
+    TypeUserList        string = "userlist"
+    TypeMessage         string = "message"
+    TypeUserJoin        string = "user-join"
+    TypeUserLeft        string = "user-left"
+    TypeRejectUsername  string = "rejectUsername"
+    TypeUploadImage     string = "upload-image"
 )
 
+
 type Msg struct {
-    Action    string   `json:"action"`
     Type      string   `json:"type"`
     Sender    string   `json:"sender"`
     Content   string   `json:"content"`
     Timestamp int64    `json:"timestamp"`
-    UserList  []string `json:"user_list"`
     Self      bool     `json:"self"`
+    // Id        string   `json:"id"`
     // Target    string   `json:"target"`
 }
 

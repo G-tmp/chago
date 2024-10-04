@@ -4,7 +4,9 @@ import (
     "log"
     "net/http"
     "time"
+    "encoding/json"
     "github.com/gorilla/websocket"
+    "github.com/google/uuid"
 )
 
 
@@ -12,7 +14,7 @@ type Client struct {
     hub     *Hub
     conn    *websocket.Conn
     send    chan []byte
-    nickname   string
+    user    *User
 }
 
 var upgrader = &websocket.Upgrader{
@@ -31,6 +33,7 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
         send: make(chan []byte, 256),
         conn: conn, 
         hub: hub,
+        user: &User{},
     }
 
     client.hub.register <- client
@@ -63,38 +66,48 @@ func (client *Client) readPump() {
         var msg *Msg 
         msg = decode(m)
 
-        switch msg.Action {
-        case SendMessageAction:
+        switch msg.Type {
+        case TypeMessage:
             msg.Timestamp = time.Now().Unix()
-            msg.Type = TextType
 
             jd := msg.encode()
-            client.hub.broadcastE(client, jd)
+            client.hub.broadcastE(client, jd) 
 
             msg.Self = true
             jd = msg.encode()
             client.send <- jd
-        case UserJoinedAction:
-            client.nickname = msg.Sender
-            msg.Timestamp = time.Now().Unix()
-            msg.Type = TextType
-            for _, c := range client.hub.clients.all() {
-                msg.UserList = append(msg.UserList, c.nickname)
-            }
 
+        case TypeUserJoin:
+            id := uuid.New().String()
+            user := &User{
+                Username: msg.Sender,
+                Id: id,
+            }
+            client.user = user
+
+            msg.Timestamp = time.Now().Unix()
             jd := msg.encode()
             client.hub.broadcast <- jd
-        case "upload-image":
+
+            var userList []string
+            for _, c := range client.hub.clients.all() {
+                userList = append(userList, c.user.Username)
+            }
+            usermap := make(map[string]any)
+            usermap["type"] = TypeUserList
+            usermap["userlist"] = userList
+            listJ, _ := json.Marshal(usermap)
+            client.hub.broadcast <- listJ
+
+        case TypeUploadImage:
             msg.Timestamp = time.Now().Unix()
-            msg.Type = ImageType
             
             jd := msg.encode()
-            client.hub.broadcastE(client, jd)
+            client.hub.broadcastE(client, jd) 
             
             msg.Self = true
             jd = msg.encode()
             client.send <- jd
-            
         default:
             log.Print("unknown type, ditch")
         }
@@ -107,20 +120,25 @@ func (client *Client) readPump() {
         client.conn.Close()
 
         msg := &Msg{
-            Action: UserLeftAction,
-            Sender: client.nickname,
+            Type: TypeUserLeft,
+            Sender: client.user.Username,
             Timestamp: time.Now().Unix(),
-            Type: TextType,
         }
-        // 1. call and get clients map first
-        for _, c := range client.hub.clients.all() {
-            if c != client {
-                msg.UserList = append(msg.UserList, c.nickname)
-            }
-        }
-
         jd := msg.encode()
         client.hub.broadcast <- jd
+
+        // 1. call and get clients map first
+        var userList []string
+        for _, c := range client.hub.clients.all() {
+            if c != client {
+                userList = append(userList, c.user.Username)
+            }
+        }
+        usermap := make(map[string]any)
+        usermap["type"] = TypeUserList
+        usermap["userlist"] = userList
+        listJ, _ := json.Marshal(usermap)
+        client.hub.broadcast <- listJ
 
     }()
 }

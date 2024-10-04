@@ -16,6 +16,8 @@ go websocket chat room
 
 * [Multi-room Chat Application With WebSockets In Go And Vue.js (Part 2)](https://www.whichdev.com/building-a-multi-room-chat-application-with-websockets-in-go-and-vue-js-part-2/)
 
+* [samples-server](https://github.com/mdn/samples-server/blob/master/s/websocket-chat/)
+
 
 ### finished
 
@@ -29,3 +31,4 @@ go websocket chat room
 * heartbeat
 * rooms
 * config file
+* DB

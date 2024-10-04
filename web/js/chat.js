@@ -1,5 +1,6 @@
 
-const uname = prompt('input your nickname');
+const myUsername = prompt('input your nickname');
+
 const ws = new WebSocket("ws://" + document.location.host + "/ws");
 const status    = document.getElementById("status");
 const mymsg     = document.getElementById("mymsg");
@@ -7,45 +8,50 @@ const msg_list  = document.getElementById("msg_list");
 const user_list = document.getElementById("user_list");
 const user_num  = document.getElementById("user_num");
 
+
 ws.onopen = function () {
-   status.innerHTML = uname;
+   status.innerHTML = myUsername;
    var msg = {
-      "action": "user-join",
-      "sender": uname
+      "type": "user-join",
+      "sender": myUsername
    };
    send(msg)
 };
 
+
 ws.onmessage = function (e) {
    var msg = JSON.parse(e.data);
 
-   if (msg.type == "image"){
-      appendImg(msg)
-   } else {
-      switch (msg.action) {
-      case 'send-message':
+   switch (msg.type) {
+      case 'message':
          appendMsg(msg);
          break;
       case 'user-join':
          sysMsg(msg.sender + " jointed")
-         list(msg.user_list)
          break;
       case 'user-left':
          sysMsg(msg.sender + " left")
-         list(msg.user_list)
          break;
-      }
+      case 'userlist':
+         list(msg.userlist);
+         break;
+      case 'upload-image':
+         appendImg(msg);
+         break;
    }
 
 };
 
-ws.onerror = function () {
-   status.innerHTML = "Connection error";
+
+ws.onerror = function (err) {
+   status.innerHTML = "Connection error " + err;
 };
+
 
 ws.onclose = function () {
    status.innerHTML = "Connection closed";
 }
+
 
 function confirm(event) {
    var key_num = event.keyCode;
@@ -56,10 +62,12 @@ function confirm(event) {
    }
 }
 
+
 function send(msg) {
    var data = JSON.stringify(msg);
    ws.send(data);
 }
+
 
 function sendMsg() {
    var content = mymsg.value;
@@ -71,12 +79,13 @@ function sendMsg() {
       return
    }
    var msg = {
-      "action": "send-message",
+      "type": "message",
       "content": content,
-      "sender": uname
+      "sender": myUsername
    };
    send(msg);
 }
+
 
 function sysMsg(data){
    var msg = document.createElement("h4")
@@ -85,6 +94,7 @@ function sysMsg(data){
    msg_list.appendChild(msg)
    msg_list.scrollTop = msg_list.scrollHeight;
 }
+
 
 function appendMsg(data) {
    var msg = document.createElement("div")
@@ -106,6 +116,7 @@ function appendMsg(data) {
    msg_list.appendChild(msg)
    msg_list.scrollTop = msg_list.scrollHeight;
 }
+
 
 function appendImg(data) {
    var msg = document.createElement("div")
@@ -130,6 +141,7 @@ function appendImg(data) {
    msg_list.scrollTop = msg_list.scrollHeight;
 }
 
+
 function list(list){
    if (list == null) 
       return
@@ -145,6 +157,7 @@ function list(list){
    user_num.innerHTML = list.length;
    user_list.scrollTop = user_list.scrollHeight;
 }
+
 
 function upload() {
    var fileInput = document.getElementById('fileInput');
@@ -166,9 +179,9 @@ function upload() {
       var file = response.filename;
 
       var msg = {
-         "action": "upload-image",
+         "type": "upload-image",
          "content": file,
-         "sender": uname
+         "sender": myUsername
       };
       send(msg)
    };
